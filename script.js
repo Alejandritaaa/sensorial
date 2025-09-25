@@ -1,9 +1,11 @@
-let osc;
-let bolas = [];
+let sonido; 
+let circulitos = [];
+let colaEstrella = [];  
 
-let currentFreq = 200;
-let currentAmp = 0;
-let trailLength = 15; // largo de la estela
+let frecActual = 200;
+let volActual = 0;
+let largoColaBolas = 15; 
+let largoColaEstrella = 30; 
 
 function setup() {
   createCanvas(windowWidth, windowHeight);
@@ -11,106 +13,112 @@ function setup() {
   noStroke();
   noCursor();
 
+  // genero varias bolitas que giran
   for (let i = 0; i < 40; i++) {
-    bolas.push({
-      radioBase: random(40, 250),
-      velocidad: random(0.01, 0.05),
-      angulo: random(TWO_PI),
-      trail: [] // historial de posiciones
+    circulitos.push({
+      radio: random(40, 250),
+      vel: random(0.01, 0.05),
+      ang: random(TWO_PI),
+      cola: []
     });
   }
 
-  osc = new p5.Oscillator('sine');
-  osc.amp(0);
+  sonido = new p5.Oscillator('sine');
+  sonido.amp(0);
 }
 
 function draw() {
   background(20, 20, 40, 25);
 
-  let rainbow = (frameCount * 0.5) % 255;
-  let hue = map(currentFreq, 100, 1000, 0, 255);
-  if (currentAmp <= 0) {
-    hue = rainbow; 
+  let arcoiris = (frameCount * 0.5) % 255;
+  let tono = map(frecActual, 100, 1000, 0, 255);
+  if (volActual <= 0) {
+    tono = arcoiris; 
   }
 
-  let bolaSize = map(currentAmp, 0, 0.5, 15, 60);
+  let tamBola = map(volActual, 0, 0.5, 15, 60);
 
-  // dibujar bolas con estelas degradadas
-  for (let i = 0; i < bolas.length; i++) {
-    let b = bolas[i];
-    b.angulo += b.velocidad;
+  // dibuja las bolitas con colita
+  for (let i = 0; i < circulitos.length; i++) {
+    let c = circulitos[i];
+    c.ang += c.vel;
 
-    // radio ondulado
-    let radioOndulado = b.radioBase + sin(frameCount * 0.05 + i) * (20 + currentAmp * 200);
+    let radioOndita = c.radio + sin(frameCount * 0.05 + i) * (20 + volActual * 200);
 
-    // nueva posición
-    let x = mouseX + cos(b.angulo) * radioOndulado;
-    let y = mouseY + sin(b.angulo) * radioOndulado;
+    let x = mouseX + cos(c.ang) * radioOndita;
+    let y = mouseY + sin(c.ang) * radioOndita;
 
-    // agregar posición al trail
-    b.trail.unshift(createVector(x, y));
-    if (b.trail.length > trailLength) {
-      b.trail.pop();
+    c.cola.unshift(createVector(x, y));
+    if (c.cola.length > largoColaBolas) {
+      c.cola.pop();
     }
 
-    // dibujar la estela
-    for (let j = 0; j < b.trail.length; j++) {
-      let pos = b.trail[j];
-      let alpha = map(j, 0, trailLength, 255, 0); // transparencia
-      let size = map(j, 0, trailLength, bolaSize, 5); // tamaño decreciente
-      let col = (hue + j * 10 + i * 5) % 255; // degradado de colores
-      fill(col, 200, 255, alpha);
-      ellipse(pos.x, pos.y, size);
+    for (let j = 0; j < c.cola.length; j++) {
+      let pos = c.cola[j];
+      let alfa = map(j, 0, largoColaBolas, 255, 0);
+      let tam = map(j, 0, largoColaBolas, tamBola, 5);
+      let col = (tono + j * 10 + i * 5) % 255;
+      fill(col, 200, 255, alfa);
+      ellipse(pos.x, pos.y, tam);
     }
   }
 
-  // ⭐ estrella como cursor dinámica
-  push();
-  let estrellaSize = map(currentAmp, 0, 0.5, 20, 70);
-  let estrellaHue = (hue + 100) % 255;
-  translate(mouseX, mouseY);
-  rotate(frameCount * 0.02);
-  drawStar(0, 0, estrellaSize * 0.4, estrellaSize, 5, estrellaHue);
-  pop();
+  // la estrellita que sigue al mouse ✨
+  let tamEstrella = map(volActual, 0, 0.5, 20, 70);
+  let tonoEstrella = (tono + 100) % 255;
+
+  colaEstrella.unshift({ 
+    x: mouseX, 
+    y: mouseY, 
+    size: tamEstrella, 
+    hue: tonoEstrella 
+  });
+  if (colaEstrella.length > largoColaEstrella) {
+    colaEstrella.pop();
+  }
+
+  // dibuja la colita de la estrella
+  for (let i = 0; i < colaEstrella.length; i++) {
+    let pos = colaEstrella[i];
+    let alfa = map(i, 0, largoColaEstrella, 200, 0);
+    let tam = map(i, 0, largoColaEstrella, pos.size, 5);
+    fill((pos.hue + i * 3) % 255, 255, 255, alfa);
+    dibujarEstrella(pos.x, pos.y, tam * 0.4, tam, 5);
+  }
 }
 
-function drawStar(x, y, radius1, radius2, npoints, hueValue) {
-  let angle = TWO_PI / npoints;
-  let halfAngle = angle / 2.0;
-  push();
-  translate(x, y);
-  noStroke();
-  fill(hueValue, 255, 255, 230);
+// función para dibujar estrellas
+function dibujarEstrella(x, y, radio1, radio2, puntas) {
+  let ang = TWO_PI / puntas;
+  let medioAng = ang / 2.0;
   beginShape();
-  for (let a = 0; a < TWO_PI; a += angle) {
-    let sx = cos(a) * radius2;
-    let sy = sin(a) * radius2;
+  for (let a = 0; a < TWO_PI; a += ang) {
+    let sx = x + cos(a) * radio2;
+    let sy = y + sin(a) * radio2;
     vertex(sx, sy);
-    sx = cos(a + halfAngle) * radius1;
-    sy = sin(a + halfAngle) * radius1;
+    sx = x + cos(a + medioAng) * radio1;
+    sy = y + sin(a + medioAng) * radio1;
     vertex(sx, sy);
   }
   endShape(CLOSE);
-  pop();
 }
 
 function mousePressed() {
   userStartAudio();
-  if (!osc.started) {
-    osc.start();
-    osc.started = true;
+  if (!sonido.started) {
+    sonido.start();
+    sonido.started = true;
   }
+  frecActual = map(mouseX, 0, width, 100, 1000);
+  sonido.freq(frecActual);
 
-  currentFreq = map(mouseX, 0, width, 100, 1000);
-  osc.freq(currentFreq);
-
-  currentAmp = 0.3;
-  osc.amp(currentAmp, 0.05);
+  volActual = 0.3;
+  sonido.amp(volActual, 0.05);
 }
 
 function mouseReleased() {
-  currentAmp = 0;
-  osc.amp(0, 0.5);
+  volActual = 0;
+  sonido.amp(0, 0.5);
 }
 
 function touchStarted() {
